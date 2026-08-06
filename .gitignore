@@ -1,0 +1,27 @@
+# Environment files
+.env
+.env.local
+.env.production
+
+# Java
+backend/target/
+*.class
+*.jar
+*.log
+
+# Node
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Operating system
+.DS_Store
+Thumbs.db
+
+# Docker volumes
+postgres_data/

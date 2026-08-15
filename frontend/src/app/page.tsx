@@ -1,39 +1,30 @@
+import Link from "next/link";
+import { Building2, LogIn, UserPlus } from "lucide-react";
+
 export default function Home() {
   return (
-    <div className="flex flex-1 bg-zinc-50 text-zinc-950">
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-10 sm:px-10">
-        <header className="flex flex-col gap-2 border-b border-zinc-200 pb-6">
-          <p className="text-sm font-medium uppercase tracking-wide text-zinc-500">
-            Milestone 1
+    <main className="flex min-h-screen bg-zinc-50 text-zinc-950">
+      <section className="mx-auto flex w-full max-w-5xl flex-col justify-center gap-8 px-6 py-10">
+        <div className="max-w-2xl">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-zinc-950 text-white">
+            <Building2 className="h-6 w-6" />
+          </div>
+          <h1 className="text-4xl font-semibold">Vednex AI Business Suite</h1>
+          <p className="mt-3 text-base leading-7 text-zinc-600">
+            Identity, company management, RBAC, and tenant-safe workspace access for the business suite foundation.
           </p>
-          <h1 className="text-3xl font-semibold">
-            Vednex AI Business Suite
-          </h1>
-          <p className="max-w-2xl text-base leading-7 text-zinc-600">
-            Enterprise SaaS foundation with backend health, public status,
-            OpenAPI documentation, PostgreSQL, Flyway, and a production-ready
-            Next.js build pipeline.
-          </p>
-        </header>
-
-        <section className="grid gap-4 md:grid-cols-3">
-          {[
-            ["Backend", "Spring Boot 4.1, Security, Actuator, OpenAPI"],
-            ["Database", "PostgreSQL managed by Docker Compose and Flyway"],
-            ["Frontend", "Next.js, TypeScript, Tailwind CSS"],
-          ].map(([title, description]) => (
-            <article
-              className="rounded-lg border border-zinc-200 bg-white p-5"
-              key={title}
-            >
-              <h2 className="text-base font-semibold">{title}</h2>
-              <p className="mt-2 text-sm leading-6 text-zinc-600">
-                {description}
-              </p>
-            </article>
-          ))}
-        </section>
-      </main>
-    </div>
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Link className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-zinc-950 px-4 text-sm font-medium text-white" href="/login">
+            <LogIn className="h-4 w-4" />
+            Login
+          </Link>
+          <Link className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-4 text-sm font-medium" href="/register">
+            <UserPlus className="h-4 w-4" />
+            Register company
+          </Link>
+        </div>
+      </section>
+    </main>
   );
 }

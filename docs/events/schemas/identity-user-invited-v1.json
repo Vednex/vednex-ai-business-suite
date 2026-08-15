@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vednex.local/events/identity-user-invited-v1.json",
+  "title": "identity.user.invited.v1",
+  "type": "object",
+  "required": ["eventId", "eventType", "eventVersion", "producer", "companyId", "userId", "correlationId", "occurredAt", "data"],
+  "properties": {
+    "eventId": { "type": "string", "format": "uuid" },
+    "eventType": { "const": "identity.user.invited.v1" },
+    "eventVersion": { "const": 1 },
+    "producer": { "const": "identity-service" },
+    "companyId": { "type": "string", "format": "uuid" },
+    "userId": { "type": "string", "format": "uuid" },
+    "correlationId": { "type": "string", "format": "uuid" },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "data": {
+      "type": "object",
+      "required": ["recipientEmail", "inviterName", "companyName", "roleName", "invitationUrl", "expiresAt"],
+      "properties": {
+        "recipientEmail": { "type": "string", "format": "email" },
+        "inviterName": { "type": "string" },
+        "companyName": { "type": "string" },
+        "roleName": { "type": "string" },
+        "invitationUrl": { "type": "string", "format": "uri" },
+        "expiresAt": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

@@ -3,8 +3,14 @@
 .env.local
 .env.production
 
+# Local secrets
+secrets/
+*.pem
+*.key
+
 # Java
-backend/target/
+services/*/target/
+services/*/.mvn-cache/
 *.class
 *.jar
 *.log

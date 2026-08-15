@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vednex.local/events/identity-user-registered-v1.json",
+  "title": "identity.user.registered.v1",
+  "type": "object",
+  "required": ["eventId", "eventType", "eventVersion", "producer", "companyId", "userId", "correlationId", "occurredAt", "data"],
+  "properties": {
+    "eventId": { "type": "string", "format": "uuid" },
+    "eventType": { "const": "identity.user.registered.v1" },
+    "eventVersion": { "const": 1 },
+    "producer": { "const": "identity-service" },
+    "companyId": { "type": "string", "format": "uuid" },
+    "userId": { "type": "string", "format": "uuid" },
+    "correlationId": { "type": "string", "format": "uuid" },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "data": {
+      "type": "object",
+      "required": ["userId", "companyId", "membershipId", "email", "emailVerified", "status"],
+      "properties": {
+        "userId": { "type": "string", "format": "uuid" },
+        "companyId": { "type": "string", "format": "uuid" },
+        "membershipId": { "type": "string", "format": "uuid" },
+        "email": { "type": "string", "format": "email" },
+        "emailVerified": { "type": "boolean" },
+        "status": { "type": "string" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

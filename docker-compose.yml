@@ -5,9 +5,10 @@ services:
     restart: unless-stopped
 
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-vednex_business_suite}
+      POSTGRES_DB: ${POSTGRES_DB:-identity_db}
+      NOTIFICATION_POSTGRES_DB: ${NOTIFICATION_POSTGRES_DB:-notification_db}
       POSTGRES_USER: ${POSTGRES_USER:-vednex}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local_dev_only_password}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vednex@123}
       TZ: UTC
 
     ports:
@@ -15,16 +16,167 @@ services:
 
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init-multiple-databases.sh:/docker-entrypoint-initdb.d/10-init-multiple-databases.sh:ro
 
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "pg_isready -U vednex -d vednex_business_suite"
+          "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"
         ]
       interval: 10s
       timeout: 5s
       retries: 5
 
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: vednex-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-vednex}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-vednex}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/}
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "rabbitmq-diagnostics",
+          "-q",
+          "ping"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mailpit:
+    image: axllent/mailpit:v1.20
+    container_name: vednex-mailpit
+    restart: unless-stopped
+    ports:
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "${MAILPIT_UI_PORT:-8025}:8025"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "/mailpit",
+          "readyz"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  identity-service:
+    build:
+      context: ./services/identity-service
+    container_name: vednex-identity-service
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+    environment:
+      SERVER_PORT: 8081
+      DB_URL: jdbc:postgresql://postgres:5432/identity_db?options=-c%20TimeZone=UTC
+      DB_USERNAME: ${POSTGRES_USER:-vednex}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-vednex@123}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-vednex}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-vednex}
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
+      APP_FRONTEND_URL: ${APP_FRONTEND_URL:-http://localhost:3000}
+      APP_BACKEND_URL: ${APP_BACKEND_URL:-http://localhost:8081}
+      CORS_ALLOWED_ORIGINS: ${IDENTITY_ALLOWED_ORIGINS:-http://localhost:8080,http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001}
+      JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY:-}
+      JWT_PRIVATE_KEY_FILE: ${JWT_PRIVATE_KEY_FILE:-/run/secrets/vednex/jwt-private.pem}
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:-}
+      JWT_PUBLIC_KEY_FILE: ${JWT_PUBLIC_KEY_FILE:-/run/secrets/vednex/jwt-public.pem}
+      JWT_ISSUER: ${JWT_ISSUER:-vednex-identity-service}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-vednex-business-suite}
+      JWT_ACCESS_EXPIRATION_MINUTES: ${JWT_ACCESS_EXPIRATION_MINUTES:-15}
+      EVENTS_EXCHANGE: ${EVENTS_EXCHANGE:-vednex.events}
+      EVENTS_DLX: ${EVENTS_DLX:-vednex.events.dlx}
+      EVENTS_ARCHIVE_QUEUE: ${EVENTS_ARCHIVE_QUEUE:-vednex.events.identity.archive}
+      EVENTS_DLQ: ${EVENTS_DLQ:-vednex.events.dlq}
+      OUTBOX_POLL_INTERVAL_MS: ${OUTBOX_POLL_INTERVAL_MS:-5000}
+      OUTBOX_BATCH_SIZE: ${OUTBOX_BATCH_SIZE:-25}
+      OUTBOX_MAX_RETRIES: ${OUTBOX_MAX_RETRIES:-10}
+      OUTBOX_RETRY_BASE_SECONDS: ${OUTBOX_RETRY_BASE_SECONDS:-30}
+      OUTBOX_PUBLISH_CONFIRM_TIMEOUT_MS: ${OUTBOX_PUBLISH_CONFIRM_TIMEOUT_MS:-5000}
+    volumes:
+      - ./secrets:/run/secrets/vednex:ro
+    expose:
+      - "8081"
+
+  notification-service:
+    build:
+      context: ./services/notification-service
+    container_name: vednex-notification-service
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+      mailpit:
+        condition: service_healthy
+    environment:
+      SERVER_PORT: 8082
+      NOTIFICATION_DB_URL: jdbc:postgresql://postgres:5432/${NOTIFICATION_POSTGRES_DB:-notification_db}?options=-c%20TimeZone=UTC
+      NOTIFICATION_DB_USERNAME: ${POSTGRES_USER:-vednex}
+      NOTIFICATION_DB_PASSWORD: ${POSTGRES_PASSWORD:-vednex@123}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-vednex}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-vednex}
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
+      APP_FRONTEND_URL: ${APP_FRONTEND_URL:-http://localhost:3000}
+      MAIL_HOST: ${NOTIFICATION_MAIL_HOST:-mailpit}
+      MAIL_PORT: ${NOTIFICATION_MAIL_PORT:-1025}
+      MAIL_USERNAME: ${NOTIFICATION_MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${NOTIFICATION_MAIL_PASSWORD:-}
+      MAIL_FROM: ${NOTIFICATION_MAIL_FROM:-no-reply@vednex.local}
+      MAIL_LOG_TOKEN_LINKS: ${MAIL_LOG_TOKEN_LINKS:-false}
+      MAIL_SMTP_AUTH: ${NOTIFICATION_MAIL_SMTP_AUTH:-false}
+      MAIL_SMTP_STARTTLS_ENABLE: ${NOTIFICATION_MAIL_SMTP_STARTTLS_ENABLE:-false}
+      MAIL_SMTP_STARTTLS_REQUIRED: ${NOTIFICATION_MAIL_SMTP_STARTTLS_REQUIRED:-false}
+      EVENTS_EXCHANGE: ${EVENTS_EXCHANGE:-vednex.events}
+      EVENTS_DLX: ${EVENTS_DLX:-vednex.events.dlx}
+      EVENTS_DLQ: ${EVENTS_DLQ:-vednex.events.dlq}
+      NOTIFICATION_IDENTITY_QUEUE: ${NOTIFICATION_IDENTITY_QUEUE:-vednex.notification.identity}
+      NOTIFICATION_CONSUMER_NAME: ${NOTIFICATION_CONSUMER_NAME:-notification-service}
+      NOTIFICATION_EMAIL_MAX_ATTEMPTS: ${NOTIFICATION_EMAIL_MAX_ATTEMPTS:-3}
+      NOTIFICATION_EMAIL_RETRY_BASE_MS: ${NOTIFICATION_EMAIL_RETRY_BASE_MS:-500}
+    expose:
+      - "8082"
+
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+    container_name: vednex-api-gateway
+    restart: unless-stopped
+    depends_on:
+      - identity-service
+    environment:
+      SERVER_PORT: 8080
+      IDENTITY_SERVICE_URL: http://identity-service:8081
+      FRONTEND_ALLOWED_ORIGINS: ${FRONTEND_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001}
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:-}
+      JWT_PUBLIC_KEY_FILE: ${JWT_PUBLIC_KEY_FILE:-/run/secrets/vednex/jwt-public.pem}
+      JWT_ISSUER: ${JWT_ISSUER:-vednex-identity-service}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-vednex-business-suite}
+    volumes:
+      - ./secrets:/run/secrets/vednex:ro
+    ports:
+      - "${API_GATEWAY_PORT:-8080}:8080"
+
 volumes:
   postgres_data:
+  rabbitmq_data:

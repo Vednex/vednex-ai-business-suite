@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vednex.local/events/identity-company-created-v1.json",
+  "title": "identity.company.created.v1",
+  "type": "object",
+  "required": ["eventId", "eventType", "eventVersion", "producer", "companyId", "userId", "correlationId", "occurredAt", "data"],
+  "properties": {
+    "eventId": { "type": "string", "format": "uuid" },
+    "eventType": { "const": "identity.company.created.v1" },
+    "eventVersion": { "const": 1 },
+    "producer": { "const": "identity-service" },
+    "companyId": { "type": "string", "format": "uuid" },
+    "userId": { "type": "string", "format": "uuid" },
+    "correlationId": { "type": "string", "format": "uuid" },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "data": {
+      "type": "object",
+      "required": ["companyId", "companySlug", "status", "country", "currency", "timezone"],
+      "properties": {
+        "companyId": { "type": "string", "format": "uuid" },
+        "companySlug": { "type": "string" },
+        "status": { "type": "string" },
+        "country": { "type": "string" },
+        "currency": { "type": "string" },
+        "timezone": { "type": "string" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

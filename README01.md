@@ -18,11 +18,9 @@ Please read and follow these steps for every code contribution.
 If you haven't already, clone the repository to your local machine and navigate into the project directory:
 
 ```bash
-git clone https://github.com
-cd YOUR-REPO-NAME
+git clone https://github.com/Vednex/vednex-ai-business-suite
+cd vednex-ai-business-suite
 ```
-*(Make sure to replace `YOUR-ORGANIZATION-NAME` and `YOUR-REPO-NAME` with our actual GitHub paths.)*
-
 ---
 
 ### Step 2: Create a Feature Branch

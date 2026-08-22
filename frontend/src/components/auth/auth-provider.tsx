@@ -2,7 +2,18 @@
 
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { api, apiErrorMessage, AuthResponse, getRefreshToken, loadStoredTokens, setTokens } from "@/lib/api";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  api,
+  apiErrorMessage,
+  AuthResponse,
+  clearStoredAuth,
+  getRefreshToken,
+  loadStoredTokens,
+  refreshStoredTokens,
+  setAuthFailureHandler,
+  setTokens,
+} from "@/lib/api";
 
 type AuthState = {
   user: AuthResponse["user"] | null;
@@ -21,6 +32,7 @@ const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<AuthResponse["user"] | null>(null);
   const [company, setCompany] = useState<AuthResponse["company"] | null>(null);
   const [roles, setRoles] = useState<string[]>([]);
@@ -28,12 +40,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const clearAuth = useCallback(() => {
-    setTokens({ accessToken: null, refreshToken: null });
+    clearStoredAuth();
     setUser(null);
     setCompany(null);
     setRoles([]);
     setPermissions([]);
-  }, []);
+    queryClient.clear();
+  }, [queryClient]);
 
   const applyAuth = useCallback(async (response: AuthResponse) => {
     setTokens({
@@ -47,12 +60,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    const response = await api.post<{ data: AuthResponse }>("/api/auth/login", {
-      email,
-      password,
-    });
-    await applyAuth(response.data.data);
-  }, [applyAuth]);
+    clearAuth();
+    try {
+      const response = await api.post<{ data: AuthResponse }>("/api/auth/login", {
+        email,
+        password,
+      });
+      await applyAuth(response.data.data);
+    } catch (error) {
+      clearAuth();
+      throw error;
+    }
+  }, [applyAuth, clearAuth]);
 
   const register = useCallback(async (payload: Record<string, unknown>) => {
     await api.post("/api/auth/register", payload);
@@ -65,10 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     try {
-      const response = await api.post<{ data: AuthResponse }>("/api/auth/refresh", {
-        refreshToken: token,
-      });
-      await applyAuth(response.data.data);
+      await applyAuth(await refreshStoredTokens());
     } catch {
       clearAuth();
     }
@@ -89,6 +105,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [clearAuth, router]);
 
   const hasPermission = useCallback((permission: string) => permissions.includes(permission), [permissions]);
+
+  useEffect(() => {
+    setAuthFailureHandler(() => {
+      clearAuth();
+      router.replace("/login");
+    });
+    return () => setAuthFailureHandler(null);
+  }, [clearAuth, router]);
 
   useEffect(() => {
     let cancelled = false;

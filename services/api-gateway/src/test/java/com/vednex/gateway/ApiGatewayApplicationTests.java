@@ -36,6 +36,7 @@ class ApiGatewayApplicationTests {
 	@DynamicPropertySource
 	static void gatewayProperties(DynamicPropertyRegistry registry) {
 		registry.add("IDENTITY_SERVICE_URL", downstream::baseUrl);
+		registry.add("CRM_SERVICE_URL", downstream::baseUrl);
 		registry.add("FRONTEND_ALLOWED_ORIGINS",
 				() -> "http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001");
 		registry.add("JWT_PUBLIC_KEY", TestJwtTokens::publicKey);
@@ -79,6 +80,11 @@ class ApiGatewayApplicationTests {
 	@Test
 	void subscriptionsRoutesToIdentityService() {
 		assertProtectedRoute("GET", "/api/subscriptions");
+	}
+
+	@Test
+	void crmRoutesToCrmService() {
+		assertProtectedRoute("GET", "/api/crm/contacts");
 	}
 
 	@Test
@@ -170,6 +176,14 @@ class ApiGatewayApplicationTests {
 	void protectedRouteWithoutJwtReturnsUnauthorized() {
 		webTestClient.get()
 				.uri("/api/company")
+				.exchange()
+				.expectStatus().isUnauthorized();
+	}
+
+	@Test
+	void crmRouteWithoutJwtReturnsUnauthorized() {
+		webTestClient.get()
+				.uri("/api/crm/contacts")
 				.exchange()
 				.expectStatus().isUnauthorized();
 	}

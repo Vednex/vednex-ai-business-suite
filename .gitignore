@@ -15,6 +15,14 @@ services/*/.mvn-cache/
 *.jar
 *.log
 
+# Python
+services/*/.venv/
+services/*/__pycache__/
+services/*/.pytest_cache/
+services/*/.ruff_cache/
+services/*/*.egg-info/
+*.pyc
+
 # Node
 frontend/node_modules/
 frontend/.next/

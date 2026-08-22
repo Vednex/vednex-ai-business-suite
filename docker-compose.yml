@@ -7,6 +7,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-identity_db}
       NOTIFICATION_POSTGRES_DB: ${NOTIFICATION_POSTGRES_DB:-notification_db}
+      CRM_POSTGRES_DB: ${CRM_POSTGRES_DB:-crm_db}
       POSTGRES_USER: ${POSTGRES_USER:-vednex}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vednex@123}
       TZ: UTC
@@ -140,8 +141,8 @@ services:
       APP_FRONTEND_URL: ${APP_FRONTEND_URL:-http://localhost:3000}
       MAIL_HOST: ${NOTIFICATION_MAIL_HOST:-mailpit}
       MAIL_PORT: ${NOTIFICATION_MAIL_PORT:-1025}
-      MAIL_USERNAME: ${NOTIFICATION_MAIL_USERNAME:-}
-      MAIL_PASSWORD: ${NOTIFICATION_MAIL_PASSWORD:-}
+      MAIL_USERNAME: ${NOTIFICATION_MAIL_USERNAME:-prithgol@gmail.com}
+      MAIL_PASSWORD: ${NOTIFICATION_MAIL_PASSWORD:-qwap nrnl femy wjks}
       MAIL_FROM: ${NOTIFICATION_MAIL_FROM:-no-reply@vednex.local}
       MAIL_LOG_TOKEN_LINKS: ${MAIL_LOG_TOKEN_LINKS:-false}
       MAIL_SMTP_AUTH: ${NOTIFICATION_MAIL_SMTP_AUTH:-false}
@@ -157,6 +158,33 @@ services:
     expose:
       - "8082"
 
+  crm-service:
+    build:
+      context: ./services/crm-service
+    container_name: vednex-crm-service
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      APP_NAME: crm-service
+      APP_ENV: ${APP_ENV:-development}
+      APP_DEBUG: ${CRM_APP_DEBUG:-true}
+      APP_HOST: 0.0.0.0
+      APP_PORT: 8083
+      API_PREFIX: /api/crm
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-vednex}:${POSTGRES_PASSWORD:-vednex@123}@postgres:5432/${CRM_POSTGRES_DB:-crm_db}
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:-}
+      JWT_PUBLIC_KEY_FILE: ${JWT_PUBLIC_KEY_FILE:-/run/secrets/vednex/jwt-public.pem}
+      JWT_ISSUER: ${JWT_ISSUER:-vednex-identity-service}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-vednex-business-suite}
+      CORS_ALLOWED_ORIGINS: ${CRM_ALLOWED_ORIGINS:-http://localhost:8080,http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001}
+      LOG_LEVEL: ${CRM_LOG_LEVEL:-INFO}
+    volumes:
+      - ./secrets:/run/secrets/vednex:ro
+    expose:
+      - "8083"
+
   api-gateway:
     build:
       context: ./services/api-gateway
@@ -164,9 +192,11 @@ services:
     restart: unless-stopped
     depends_on:
       - identity-service
+      - crm-service
     environment:
       SERVER_PORT: 8080
       IDENTITY_SERVICE_URL: http://identity-service:8081
+      CRM_SERVICE_URL: http://crm-service:8083
       FRONTEND_ALLOWED_ORIGINS: ${FRONTEND_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001}
       JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:-}
       JWT_PUBLIC_KEY_FILE: ${JWT_PUBLIC_KEY_FILE:-/run/secrets/vednex/jwt-public.pem}

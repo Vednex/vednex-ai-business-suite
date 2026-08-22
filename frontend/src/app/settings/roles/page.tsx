@@ -19,6 +19,16 @@ type Role = {
 type Permission = { id: string; code: string; description?: string };
 type RoleForm = { name: string; description?: string; permissions: Record<string, boolean> };
 
+function rolePayload(values: RoleForm) {
+  return {
+    name: values.name.trim().toUpperCase().replace(/\s+/g, "_"),
+    description: values.description,
+    permissions: Object.entries(values.permissions ?? {})
+      .filter(([, enabled]) => enabled)
+      .map(([code]) => code),
+  };
+}
+
 export default function RolesSettingsPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
@@ -34,14 +44,7 @@ export default function RolesSettingsPage() {
   });
 
   const createRole = useMutation({
-    mutationFn: async (values: RoleForm) =>
-      api.post("/api/roles", {
-        name: values.name,
-        description: values.description,
-        permissions: Object.entries(values.permissions ?? {})
-          .filter(([, enabled]) => enabled)
-          .map(([code]) => code),
-      }),
+    mutationFn: async (values: RoleForm) => api.post("/api/roles", rolePayload(values)),
     onSuccess: async () => {
       setMessage("Role created");
       form.reset();
@@ -52,13 +55,7 @@ export default function RolesSettingsPage() {
 
   const updateRole = useMutation({
     mutationFn: async ({ roleId, values }: { roleId: string; values: RoleForm }) =>
-      api.put(`/api/roles/${roleId}`, {
-        name: values.name,
-        description: values.description,
-        permissions: Object.entries(values.permissions ?? {})
-          .filter(([, enabled]) => enabled)
-          .map(([code]) => code),
-      }),
+      api.put(`/api/roles/${roleId}`, rolePayload(values)),
     onSuccess: async () => {
       setMessage("Role updated");
       setEditingRole(null);
@@ -67,6 +64,24 @@ export default function RolesSettingsPage() {
     },
     onError: (error) => setMessage(apiErrorMessage(error)),
   });
+
+  const deleteRole = useMutation({
+    mutationFn: async (roleId: string) => api.delete(`/api/roles/${roleId}`),
+    onSuccess: async () => {
+      setMessage("Role deleted");
+      setEditingRole(null);
+      editForm.reset();
+      await roles.refetch();
+    },
+    onError: (error) => setMessage(apiErrorMessage(error)),
+  });
+
+  function confirmDelete(role: Role) {
+    if (!window.confirm(`Delete role ${role.name}?`)) {
+      return;
+    }
+    deleteRole.mutate(role.id);
+  }
 
   function startEditing(role: Role) {
     setEditingRole(role);
@@ -100,7 +115,17 @@ export default function RolesSettingsPage() {
                     <td>{role.protectedSystemRole ? "System" : "Custom"}</td>
                     <td>{role.permissions.length}</td>
                     <td>
-                      <Button onClick={() => startEditing(role)} type="button" variant="secondary">Edit</Button>
+                      <div className="flex flex-wrap gap-2">
+                        <Button onClick={() => startEditing(role)} type="button" variant="secondary">Edit</Button>
+                        <Button
+                          disabled={role.protectedSystemRole || deleteRole.isPending}
+                          onClick={() => confirmDelete(role)}
+                          type="button"
+                          variant="danger"
+                        >
+                          Delete
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -140,19 +165,19 @@ export default function RolesSettingsPage() {
               </div>
             </form>
           ) : (
-          <form className="grid gap-3" onSubmit={form.handleSubmit((values) => createRole.mutate(values))}>
-            <Input placeholder="ROLE_NAME" {...form.register("name", { required: true })} />
-            <Input placeholder="Description" {...form.register("description")} />
-            <div className="max-h-80 space-y-2 overflow-auto rounded-md border border-zinc-200 p-3">
-              {permissions.data?.map((permission) => (
-                <label className="flex items-center gap-2 text-sm" key={permission.code}>
-                  <input type="checkbox" {...form.register(`permissions.${permission.code}`)} />
-                  <span>{permission.code}</span>
-                </label>
-              ))}
-            </div>
-            <Button disabled={createRole.isPending} type="submit">Create role</Button>
-          </form>
+            <form className="grid gap-3" onSubmit={form.handleSubmit((values) => createRole.mutate(values))}>
+              <Input placeholder="ROLE_NAME" {...form.register("name", { required: true })} />
+              <Input placeholder="Description" {...form.register("description")} />
+              <div className="max-h-80 space-y-2 overflow-auto rounded-md border border-zinc-200 p-3">
+                {permissions.data?.map((permission) => (
+                  <label className="flex items-center gap-2 text-sm" key={permission.code}>
+                    <input type="checkbox" {...form.register(`permissions.${permission.code}`)} />
+                    <span>{permission.code}</span>
+                  </label>
+                ))}
+              </div>
+              <Button disabled={createRole.isPending} type="submit">Create role</Button>
+            </form>
           )}
         </Card>
       </div>

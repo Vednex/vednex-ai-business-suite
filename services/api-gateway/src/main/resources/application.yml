@@ -39,6 +39,10 @@ spring:
           uri: ${IDENTITY_SERVICE_URL:http://localhost:8081}
           predicates:
             - Path=/v3/api-docs/**,/swagger-ui/**,/swagger-ui.html
+        - id: crm-service
+          uri: ${CRM_SERVICE_URL:http://localhost:8083}
+          predicates:
+            - Path=/api/crm/**
 
 gateway:
   cors:

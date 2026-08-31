@@ -173,7 +173,7 @@ services:
       APP_HOST: 0.0.0.0
       APP_PORT: 8083
       API_PREFIX: /api/crm
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-vednex}:${POSTGRES_PASSWORD:-vednex@123}@postgres:5432/${CRM_POSTGRES_DB:-crm_db}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-vednex}:${POSTGRES_PASSWORD:-vednex%40123}@postgres:5432/${CRM_POSTGRES_DB:-crm_db}
       JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:-}
       JWT_PUBLIC_KEY_FILE: ${JWT_PUBLIC_KEY_FILE:-/run/secrets/vednex/jwt-public.pem}
       JWT_ISSUER: ${JWT_ISSUER:-vednex-identity-service}

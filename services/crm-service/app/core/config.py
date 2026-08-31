@@ -10,13 +10,16 @@ class Settings(BaseSettings):
     app_host: str = "0.0.0.0"
     app_port: int = 8083
     api_prefix: str = "/api/crm"
-    database_url: str = "postgresql+psycopg://vednex:vednex@localhost:5432/crm_db"
+    database_url: str = "postgresql+psycopg://vednex:vednex%40123@localhost:5432/crm_db"
     jwt_public_key: str = ""
     jwt_public_key_file: str = ""
     jwt_issuer: str = "vednex-identity-service"
     jwt_audience: str = "vednex-business-suite"
     cors_allowed_origins: str = ""
     log_level: str = "INFO"
+
+    rabbitmq_url: str = ""
+    rabbitmq_exchange: str = "vednex.events"
 
     model_config = SettingsConfigDict(
         env_file=".env",

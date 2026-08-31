@@ -1,1 +1,2 @@
-"""Database package for future CRM persistence."""
+"""Database package."""
+from app.db.base import Base, get_db  # noqa: F401
